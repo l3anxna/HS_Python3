@@ -1,37 +1,83 @@
 import pygame
-import sys
-
+import random
 
 pygame.init()
 
-
 width, height = 800, 600
-screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Bouncing Circle")
-
+fps = 60
 radius = 20
-x, y = 100, 100
-dx, dy = 2, 2
 
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+def random_color():
+    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-    x += dx
-    y += dy
 
-    if x - radius < 0 or x + radius > width:
-        dx *= -1
-    if y - radius < 0 or y + radius > height:
-        dy *= -1
+class Circle:
+    def __init__(self):
+        self.x = random.randint(radius, width - radius)
+        self.y = random.randint(radius, height - radius)
+        self.dx = random.choice([-3, 3])
+        self.dy = random.choice([-3, 3])
+        self.radius = radius
+        self.color = random_color()
 
-    screen.fill((255, 255, 255))
+    def move(self):
+        self.x += self.dx
+        self.y += self.dy
 
-    pygame.draw.circle(screen, (255, 0, 0), (x, y), radius)
+        if self.x <= self.radius or self.x >= width - self.radius:
+            self.dx *= -1
+            self.color = random_color()
+        if self.y <= self.radius or self.y >= height - self.radius:
+            self.dy *= -1
+            self.color = random_color()
 
-    pygame.display.flip()
+    def draw(self, screen):
+        pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
 
-    pygame.time.delay(10)
+    def collision(self, other):
+        distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
+        if distance < self.radius * 2:
+            return True
+        return False
+
+    def handle_collision(self, other):
+        if self.collision(other):
+            self.dx *= -1
+            self.dy *= -1
+            self.color = random_color()
+            other.dx *= -1
+            other.dy *= -1
+            other.color = random_color()
+
+
+def main():
+    screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Bouncing Circles")
+    clock = pygame.time.Clock()
+
+    num_circle = random.randint(5, 20)
+    circles = [Circle() for _ in range(num_circle)]
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        screen.fill((0, 0, 0))
+
+        for i in range(len(circles)):
+            circles[i].move()
+            for j in range(i + 1, len(circles)):
+                circles[i].handle_collision(circles[j])
+            circles[i].draw(screen)
+
+        pygame.display.flip()
+        clock.tick(fps)
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
