@@ -2,7 +2,7 @@ import socket
 import select
 import sys
 
-HOST = "127.0.0.1"
+HOST = "10.237.21.42"
 PORT = 21002
 
 try:
@@ -33,7 +33,5 @@ try:
 
 except ConnectionRefusedError:
     print("Could not connect to the server. Ensure the server is running.")
-except Exception as e:
-    print(f"An error occurred: {e}")
 
 print("Client finished")
