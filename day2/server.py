@@ -1,5 +1,4 @@
 import socket
-import sys
 
 HOST = None
 PORT = 80
@@ -25,7 +24,7 @@ print(f"Listening on port {PORT}...")
 conn, addr = s.accept()
 with conn:
     print("Connected by", addr)
-    
+
     data = conn.recv(1024)
     print("Received data:", data.decode())
 
@@ -37,7 +36,7 @@ with conn:
         "Connection: close\r\n"
         "\r\n"
     )
-    
+
     conn.sendall(response_headers.encode() + response_body)
 
 print("Response sent successfully!")
