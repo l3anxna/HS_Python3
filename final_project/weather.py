@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-API_KEY = os.getenv("d267cdf65b4e44a3b6a21013252701")
+API_KEY = os.getenv("WEATHER_API_KEY")
 print(f"Using API Key: {API_KEY}")
 
 def fetch_weather_data(lat, lon, date):
@@ -51,7 +51,7 @@ def load_from_csv(filename):
 def plot_weather_data(processed_data, date):
     hours = np.arange(24)
     
-    plt.figure(figsize=(12, 6))
+    fig, ax1 = plt.subplots(figsize=(12, 6))
     
     plt.subplot(2, 1, 1)
     plt.plot(hours, processed_data["temperature"], label="Temperature (°C)", marker="o")
