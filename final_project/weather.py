@@ -1,119 +1,106 @@
+import os
 import requests
-import csv
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# Replace with your own API key from OpenWeatherMap or WeatherAPI
-API_KEY = "your_api_key"
-BASE_URL = "http://api.openweathermap.org/data/2.5/onecall/timemachine"
+API_KEY = os.getenv("d267cdf65b4e44a3b6a21013252701")
+print(f"Using API Key: {API_KEY}")
 
 def fetch_weather_data(lat, lon, date):
-    """
-    Fetch historical weather data for a specific location and date.
-    """
+    BASE_URL = "https://api.weatherapi.com/v1/history.json"
+    params = {
+        "key": API_KEY,
+        "q": f"{lat},{lon}",
+        "dt": date.strftime("%Y-%m-%d")
+    }
+    
     try:
-        params = {
-            "lat": lat,
-            "lon": lon,
-            "dt": int(date.timestamp()),
-            "appid": API_KEY,
-            "units": "metric"  # Use metric units (Celsius)
-        }
         response = requests.get(BASE_URL, params=params)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data: {e}")
-        return None
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except requests.exceptions.RequestException as req_err:
+        print(f"Request error occurred: {req_err}")
+    return None
 
 def save_to_csv(data, filename):
-    """
-    Save weather data to a CSV file.
-    """
-    with open(filename, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Hour", "Temperature (°C)", "Humidity (%)", "Precipitation (mm)"])
-
-        for i, hour in enumerate(data["hourly"]):
-            temp = hour["temp"]
-            humidity = hour["humidity"]
-            precipitation = hour.get("rain", {}).get("1h", 0)  # Default to 0 if no rain data
-            writer.writerow([i, temp, humidity, precipitation])
-
+    hourly_data = []
+    for hour in data["forecast"]["forecastday"][0]["hour"]:
+        hourly_data.append({
+            "Hour": hour["time"].split(" ")[1],
+            "Temperature (°C)": hour["temp_c"],
+            "Humidity (%)": hour["humidity"],
+            "Precipitation (mm)": hour.get("precip_mm", 0)
+        })
+    
+    df = pd.DataFrame(hourly_data)
+    df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
 
 def load_from_csv(filename):
-    """
-    Load weather data from a CSV file.
-    """
-    data = {"temperature": [], "humidity": [], "precipitation": []}
-    with open(filename, mode="r", encoding="utf-8") as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            data["temperature"].append(float(row["Temperature (°C)"]))
-            data["humidity"].append(float(row["Humidity (%)"]))
-            data["precipitation"].append(float(row["Precipitation (mm)"]))
-    return {key: np.array(value) for key, value in data.items()}
+    df = pd.read_csv(filename)
+    return {
+        "temperature": df["Temperature (°C)"].to_numpy(),
+        "humidity": df["Humidity (%)"].to_numpy(),
+        "precipitation": df["Precipitation (mm)"].to_numpy()
+    }
 
 def plot_weather_data(processed_data, date):
-    """
-    Plot the processed weather data using Matplotlib.
-    """
     hours = np.arange(24)
     
-    # Temperature Plot
     plt.figure(figsize=(12, 6))
+    
+    plt.subplot(2, 1, 1)
     plt.plot(hours, processed_data["temperature"], label="Temperature (°C)", marker="o")
-    plt.fill_between(hours, 
-                     processed_data["temperature"] - processed_data["temperature"].std(), 
+    plt.fill_between(hours,
+                     processed_data["temperature"] - processed_data["temperature"].std(),
                      processed_data["temperature"] + processed_data["temperature"].std(),
                      alpha=0.2, color="orange", label="Temperature Std Dev")
     plt.title(f"Temperature Trend on {date}")
     plt.xlabel("Hour of the Day")
     plt.ylabel("Temperature (°C)")
     plt.legend()
-    plt.grid()
-    plt.show()
-
-    # Humidity and Precipitation Plot
-    fig, ax1 = plt.subplots(figsize=(12, 6))
-
+    
+    plt.subplot(2, 1, 2)
+    ax1 = plt.gca()
+    
     ax1.plot(hours, processed_data["humidity"], label="Humidity (%)", color="blue", marker="s")
-    ax1.set_xlabel("Hour of the Day")
     ax1.set_ylabel("Humidity (%)", color="blue")
-    ax1.tick_params(axis="y", labelcolor="blue")
-
+    
     ax2 = ax1.twinx()
     ax2.bar(hours, processed_data["precipitation"], alpha=0.6, label="Precipitation (mm)", color="green")
     ax2.set_ylabel("Precipitation (mm)", color="green")
-    ax2.tick_params(axis="y", labelcolor="green")
-
-    fig.suptitle(f"Humidity and Precipitation Trends on {date}")
-    fig.legend(loc="upper right")
-    plt.grid()
+    
+    plt.title(f"Humidity and Precipitation Trends on {date}")
+    
+    fig.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
     print("Welcome to the Weather Trends Visualization Tool!")
-    city = input("Enter city name (e.g., London): ")
-
-    # Simulating city coordinates lookup (replace with real geocoding API if needed)
+    
     city_coords = {
         "London": {"lat": 51.5074, "lon": -0.1278},
         "New York": {"lat": 40.7128, "lon": -74.0060},
         "Tokyo": {"lat": 35.6895, "lon": 139.6917},
     }
 
+    city = input("Enter city name (e.g., London): ")
+    
     if city not in city_coords:
-        print("City not found in database. Add coordinates for it manually.")
-    else:
-        lat, lon = city_coords[city]["lat"], city_coords[city]["lon"]
+        print("City not found in database.")
+        exit()
 
-        # User input for date
-        date_input = input("Enter a date (YYYY-MM-DD) for historical weather data: ")
+    lat, lon = city_coords[city]["lat"], city_coords[city]["lon"]
+    
+    date_input = input("Enter a date (YYYY-MM-DD) for historical weather data: ")
+    
+    try:
         date = datetime.strptime(date_input, "%Y-%m-%d")
-
+        
         print(f"Fetching weather data for {city} on {date_input}...")
         weather_data = fetch_weather_data(lat, lon, date)
 
@@ -121,8 +108,10 @@ if __name__ == "__main__":
             filename = f"{city}_{date_input}.csv"
             save_to_csv(weather_data, filename)
 
-            # Load data from CSV and plot
             processed_data = load_from_csv(filename)
             plot_weather_data(processed_data, date_input)
         else:
-            print("Failed to retrieve data. Please try again.")
+            print("Failed to retrieve data.")
+            
+    except ValueError:
+        print("Invalid date format. Please use YYYY-MM-DD.")
