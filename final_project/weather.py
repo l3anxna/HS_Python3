@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -14,9 +15,11 @@ API_KEY = os.getenv("WEATHER_API_KEY")
 if not API_KEY:
     raise ValueError("No API key found.")
 
+
 @app.route("/")
 def home():
     return render_template("start.html")
+
 
 def fetch_weather_data(lat, lon, date=None, endpoint="history"):
     BASE_URL = f"https://api.weatherapi.com/v1/{endpoint}.json"
@@ -38,6 +41,7 @@ def fetch_weather_data(lat, lon, date=None, endpoint="history"):
     except requests.exceptions.RequestException as req_err:
         print(f"Request error occurred: {req_err}")
         return None
+
 
 def save_to_csv(data, filename, historical=False):
     all_data = []
@@ -87,10 +91,21 @@ def load_from_csv(filename, selected_date):
         "aqi": df["AQI (US)"].to_numpy(),
     }
 
+def generate_forecast_summary(forecast_data):
+    descriptions = []
+    for day in forecast_data["forecast"]["forecastday"]:
+        date = day["date"]
+        condition = day["day"]["condition"]["text"]
+        temp_max = day["day"]["maxtemp_c"]
+        temp_min = day["day"]["mintemp_c"]
+        descriptions.append(f"{date}: {condition} with temperatures ranging from {temp_min}°C to {temp_max}°C.")
+    return " ".join(descriptions)
+
 def plot_weather_data(processed_data, date, historical=False):
     hours = np.arange(len(processed_data["hour"]))
     
-    fig, ax = plt.subplots(3 if not historical else 2, 1, figsize=(12, 10))
+    num_plots = 2 if historical else 3
+    fig, ax = plt.subplots(num_plots, 1, figsize=(12, 10))
 
     ax[0].plot(
         hours,
@@ -151,16 +166,18 @@ def plot_weather_data(processed_data, date, historical=False):
         "average_temperature": np.mean(processed_data["temperature"]),
         "average_humidity": np.mean(processed_data["humidity"]),
         "total_precipitation": np.sum(processed_data["precipitation"]),
-        "aqi": processed_data.get("aqi", "N/A")
     }
 
-    return plot_filename, summary
+    if not historical:
+        summary["aqi"] = processed_data.get("aqi", "N/A")
 
+    return plot_filename, summary
 
 
 @app.route("/index")
 def index():
     return render_template("index.html")
+
 
 @app.route("/fetch", methods=["POST"])
 def fetch_weather():
@@ -179,21 +196,24 @@ def fetch_weather():
         "Odesa": {"lat": 46.4825, "lon": 30.7233},
     }
 
-    city = request.form.get('city')
-    option = request.form.get('option')
+    city = request.form.get("city")
+    option = request.form.get("option")
 
     if city not in city_coords:
-        return 'City not found in database.'
+        return "City not found in database."
 
     lat, lon = city_coords[city]["lat"], city_coords[city]["lon"]
 
-    if option == '1':
-        date_input = request.form.get('date')
-        
+    if option == "1":
+        date_input = request.form.get("date")
+
         try:
             selected_date = datetime.strptime(date_input, "%Y-%m-%d")
-            if selected_date > datetime.now() or selected_date < datetime.now() - timedelta(days=7):
-                return 'Date must be within the past 7 days.'
+            if (
+                selected_date > datetime.now()
+                or selected_date < datetime.now() - timedelta(days=7)
+            ):
+                return "Date must be within the past 7 days."
 
             historical_data = fetch_weather_data(lat, lon, selected_date)
 
@@ -202,23 +222,27 @@ def fetch_weather():
                 save_to_csv(historical_data, filename, historical=True)
                 processed_data = load_from_csv(filename, date_input)
                 plot_filename, summary = plot_weather_data(processed_data, date_input)
-                return render_template('result.html', plot_url=plot_filename, summary=summary)
+                return render_template(
+                    "result.html", plot_url=plot_filename, summary=summary
+                )
 
             else:
-                return 'Failed to retrieve data.'
-        
-        except ValueError:
-            return 'Invalid date format. Please use YYYY-MM-DD.'
+                return "Failed to retrieve data."
 
-    elif option == '2':
+        except ValueError:
+            return "Invalid date format. Please use YYYY-MM-DD."
+
+    elif option == "2":
         forecast_data = fetch_weather_data(lat, lon, endpoint="forecast")
 
         if forecast_data:
+            forecast_summary = generate_forecast_summary(forecast_data)
             filename = f"{city}_3_day_forecast_aqi.csv"
             save_to_csv(forecast_data, filename)
 
             dates = [day["date"] for day in forecast_data["forecast"]["forecastday"]]
-            return render_template('select_date.html', dates=dates)
+            return render_template("select_date.html", dates=dates, summary=forecast_summary)
+
 
 @app.route("/visualize", methods=["POST"])
 def visualize_forecast():
@@ -237,22 +261,22 @@ def visualize_forecast():
         "Odesa": {"lat": 46.4825, "lon": 30.7233},
      }
 
-    city = request.form['city']
-    selected_date = request.form['selected_date']
-    
-    lat, lon = city_coords[city]["lat"], city_coords[city]["lon"]
-    
-    forecast_data = fetch_weather_data(lat, lon, endpoint="forecast")
-    
-    filename = f"{city}_3_day_forecast_aqi.csv"
-    
-    save_to_csv(forecast_data, filename)
-    
-    processed_data = load_from_csv(filename, selected_date)
-    
-    plot_filename = plot_weather_data(processed_data, selected_date)
+    city = request.form["city"]
+    selected_date = request.form["selected_date"]
 
-    return render_template('result.html', plot_url=plot_filename)
+    lat, lon = city_coords[city]["lat"], city_coords[city]["lon"]
+
+    forecast_data = fetch_weather_data(lat, lon, endpoint="forecast")
+
+    filename = f"{city}_3_day_forecast_aqi.csv"
+
+    save_to_csv(forecast_data, filename)
+
+    processed_data = load_from_csv(filename, selected_date)
+
+    plot_filename, summary = plot_weather_data(processed_data, selected_date)
+    return render_template("result.html", plot_url=plot_filename, summary=summary)
+
 
 if __name__ == "__main__":
-   app.run(debug=True)
+     app.run(debug=True)

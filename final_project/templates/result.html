@@ -19,6 +19,7 @@
    <div class="container text-center">
        <h1>Weather Data Visualization</h1>
        <img src="{{ plot_url }}" alt="Weather Plot" class="img-fluid my-4">
+       
        <div class="summary">
            <h3>Weather Summary</h3>
            <p><strong>Average Temperature:</strong> {{ summary.average_temperature | round(2) }} °C</p>
@@ -27,7 +28,14 @@
            <p><strong>AQI:</strong> {{ summary.aqi }}</p>
        </div>
 
-       <a href="/" class="btn btn-secondary">Back to Home</a>
+       {% if forecast_summary %}
+       <div class="forecast-summary mt-4">
+           <h3>Forecast Summary</h3>
+           <p>{{ forecast_summary }}</p>
+       </div>
+       {% endif %}
+
+       <a href="/index" class="btn btn-secondary">Back to Home</a>
    </div>
 
    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
