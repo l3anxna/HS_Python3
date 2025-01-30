@@ -5,19 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <title>Weather Result</title>
+  <style>
+    body {
+      background-color: #f0f2f5;
+    }
+
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #343a40;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      color: #495057;
+      margin-top: 20px;
+    }
+
+    p {
+      font-size: 16px;
+    }
+
+    img {
+      border-radius: 10px;
+      max-width: 100%;
+      height: auto;
+    }
+    
+    .container {
+      padding: 20px;
+    }
+  </style>
 </head>
 <body>
 <div class="container mt-5">
   <h1 class="text-center">Weather Data Result</h1>
 
-  <h2>Summary:</h2>
-  <p>{{ summary|safe }}</p>
+  <div class="card p-4 mb-4">
+    <h2>Summary:</h2>
+    <p>{{ summary|safe }}</p>
+  </div>
 
-  <h2>Line Graph:</h2>
-  <img src="{{ plot_url }}" alt="Weather Plot">
+  <div class="card p-4 mb-4">
+    <h2>Line Graph:</h2>
+    <img src="{{ plot_url }}" alt="Weather Plot">
+  </div>
 
-  <h2>Pie Chart:</h2>
-  <img src="{{ pie_chart_url }}" alt="Weather Pie Chart">
+  <div class="card p-4 mb-4">
+    <h2>Pie Chart:</h2>
+    <img src="{{ pie_chart_url }}" alt="Weather Pie Chart">
+  </div>
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

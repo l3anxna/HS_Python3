@@ -100,10 +100,9 @@ def plot_weather_data(processed_data, date, city_name):
     humidity = processed_data["humidity"]
     uv_index = processed_data.get("UV Index", np.zeros(len(hours)))
 
-    # Check for valid indices
     valid_indices = ~np.isnan(temperature) & ~np.isnan(humidity) & ~np.isnan(uv_index)
 
-    if not np.any(valid_indices):  # If no valid data is available
+    if not np.any(valid_indices):
         raise ValueError("No valid weather data available for plotting.")
 
     fig, ax = plt.subplots(3, 1, figsize=(12, 12))
@@ -164,15 +163,15 @@ def plot_weather_data(processed_data, date, city_name):
     return plot_filename, summary, pie_chart_filename
 
 
-
 def plot_pie_chart(processed_data):
     temperature_bins = [-np.inf, 10, 20, np.inf]
-    temperature_counts = np.histogram(processed_data["temperature"], bins=temperature_bins)[0]
+    temperature_counts = np.histogram(
+        processed_data["temperature"], bins=temperature_bins
+    )[0]
 
     humidity_bins = [-np.inf, 40, 70, np.inf]
     humidity_counts = np.histogram(processed_data["humidity"], bins=humidity_bins)[0]
 
-    # Check for empty counts
     if np.all(temperature_counts == 0) or np.all(humidity_counts == 0):
         raise ValueError("No valid data available for pie chart.")
 
@@ -197,7 +196,7 @@ def plot_pie_chart(processed_data):
     plt.tight_layout()
 
     pie_chart_filename = "static/pie_chart.png"
-    
+
     plt.savefig(pie_chart_filename)
     plt.close(fig)
 
