@@ -1,46 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Weather Visualization Result</title>
-   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-   <style>
-       body {
-           background-color: #f8f9fa;
-           padding: 20px;
-       }
-       h1 {
-           color: #343a40;
-       }
-   </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Weather Result</title>
 </head>
 <body>
-   <div class="container text-center">
-       <h1>Weather Data Visualization</h1>
-       <img src="{{ plot_url }}" alt="Weather Plot" class="img-fluid my-4">
-       
-       <div class="summary">
-           <h3>Weather Summary</h3>
-           <p><strong>Average Temperature:</strong> {{ summary.average_temperature | round(2) }} °C</p>
-           <p><strong>Average Humidity:</strong> {{ summary.average_humidity | round(2) }} %</p>
-           <p><strong>Total Precipitation:</strong> {{ summary.total_precipitation | round(2) }} mm</p>
-           <p><strong>AQI:</strong> {{ summary.aqi }}</p>
-       </div>
+<div class="container mt-5">
+  <h1 class="text-center">Weather Data Result</h1>
 
-       {% if forecast_summary %}
-       <div class="forecast-summary mt-4">
-           <h3>Forecast Summary</h3>
-           <p>{{ forecast_summary }}</p>
-       </div>
-       {% endif %}
+  <h2>Summary:</h2>
+  <p>{{ summary|safe }}</p>
 
-       <a href="/index" class="btn btn-secondary">Back to Home</a>
-   </div>
+  <h2>Line Graph:</h2>
+  <img src="{{ plot_url }}" alt="Weather Plot">
 
-   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-   <script src="//cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-   <script src="//stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <h2>Pie Chart:</h2>
+  <img src="{{ pie_chart_url }}" alt="Weather Pie Chart">
 
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
