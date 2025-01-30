@@ -19,6 +19,14 @@
    <div class="container text-center">
        <h1>Weather Data Visualization</h1>
        <img src="{{ plot_url }}" alt="Weather Plot" class="img-fluid my-4">
+       <div class="summary">
+           <h3>Weather Summary</h3>
+           <p><strong>Average Temperature:</strong> {{ summary.average_temperature | round(2) }} °C</p>
+           <p><strong>Average Humidity:</strong> {{ summary.average_humidity | round(2) }} %</p>
+           <p><strong>Total Precipitation:</strong> {{ summary.total_precipitation | round(2) }} mm</p>
+           <p><strong>AQI:</strong> {{ summary.aqi }}</p>
+       </div>
+
        <a href="/" class="btn btn-secondary">Back to Home</a>
    </div>
 
@@ -28,4 +36,3 @@
 
 </body>
 </html>
-
