@@ -32,7 +32,7 @@ def fetch_weather_data(city_name, date=None):
     if date:
         BASE_URL += f"/{date.strftime('%Y-%m-%d')}"
     else:
-        BASE_URL += "/next3days"
+        BASE_URL += "/next15days"
 
     params = {
         "unitGroup": "metric",
@@ -55,7 +55,15 @@ def fetch_weather_data(city_name, date=None):
 def save_to_csv(data, filename):
     all_data = []
 
+    if "days" not in data:
+        print("No 'days' data found in the response.")
+        return
+
     for day in data["days"]:
+        if "hours" not in day:
+            print(f"No 'hours' data found for {day.get('datetime', 'unknown date')}.")
+            continue
+
         for hour in day["hours"]:
             all_data.append(
                 {
@@ -92,7 +100,11 @@ def plot_weather_data(processed_data, date, city_name):
     humidity = processed_data["humidity"]
     uv_index = processed_data.get("UV Index", np.zeros(len(hours)))
 
+    # Check for valid indices
     valid_indices = ~np.isnan(temperature) & ~np.isnan(humidity) & ~np.isnan(uv_index)
+
+    if not np.any(valid_indices):  # If no valid data is available
+        raise ValueError("No valid weather data available for plotting.")
 
     fig, ax = plt.subplots(3, 1, figsize=(12, 12))
 
@@ -152,14 +164,17 @@ def plot_weather_data(processed_data, date, city_name):
     return plot_filename, summary, pie_chart_filename
 
 
+
 def plot_pie_chart(processed_data):
     temperature_bins = [-np.inf, 10, 20, np.inf]
-    temperature_counts = np.histogram(
-        processed_data["temperature"], bins=temperature_bins
-    )[0]
+    temperature_counts = np.histogram(processed_data["temperature"], bins=temperature_bins)[0]
 
     humidity_bins = [-np.inf, 40, 70, np.inf]
     humidity_counts = np.histogram(processed_data["humidity"], bins=humidity_bins)[0]
+
+    # Check for empty counts
+    if np.all(temperature_counts == 0) or np.all(humidity_counts == 0):
+        raise ValueError("No valid data available for pie chart.")
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
@@ -182,8 +197,7 @@ def plot_pie_chart(processed_data):
     plt.tight_layout()
 
     pie_chart_filename = "static/pie_chart.png"
-
-
+    
     plt.savefig(pie_chart_filename)
     plt.close(fig)
 
@@ -211,15 +225,13 @@ def fetch_weather():
     if option == "1":
         date_input = request.form.get("date")
 
+        if not date_input:
+            return "Date input cannot be empty. Please select a date."
+
         try:
             selected_date = datetime.strptime(date_input, "%Y-%m-%d")
-
             if selected_date > datetime.now():
-                return "Cannot fetch historical data for a future date."
-
-            if selected_date < datetime.now() - timedelta(days=7):
-                return "Date must be within the past 7 days."
-
+                return "Cannot fetch forecast data for past dates."
             historical_data = fetch_weather_data(city_name, selected_date)
 
             if not historical_data:
@@ -254,44 +266,45 @@ def fetch_weather():
             return "Invalid date format. Please use YYYY-MM-DD."
 
     elif option == "2":
-        forecast_data = fetch_weather_data(city_name)
+        date_input = request.form.get("date")
 
-        if not forecast_data:
-            return "Failed to retrieve forecast data. Please try again later."
+        if not date_input:
+            return "Date input cannot be empty. Please select a date."
 
-        filename_forecast = f"{city_name}_forecast_weather.csv"
-        save_to_csv(forecast_data, filename_forecast)
-        processed_forecast_data = load_from_csv(
-            filename_forecast, forecast_data["days"][0]["datetime"]
-        )
+        try:
+            selected_date = datetime.strptime(date_input, "%Y-%m-%d")
+            forecast_data = fetch_weather_data(city_name, selected_date)
 
-        if processed_forecast_data:
-            plot_filename_forecast, summary_forecast, pie_chart_filename_forecast = (
-                plot_weather_data(
-                    processed_forecast_data,
-                    forecast_data["days"][0]["datetime"],
-                    city_name,
+            if not forecast_data:
+                return "Failed to retrieve weather data. Please try again later."
+
+            filename = f"{city_name}_forecast_weather.csv"
+            save_to_csv(forecast_data, filename)
+            processed_data = load_from_csv(filename, date_input)
+
+            if processed_data:
+                plot_filename, summary, pie_chart_filename = plot_weather_data(
+                    processed_data, date_input, city_name
                 )
-            )
-            weather_summary_forecast = generate_weather_summary(processed_forecast_data)
+                weather_summary = generate_weather_summary(processed_data)
 
-            summary_text_forecast = (
-                f"Average Temperature: {summary_forecast['average_temperature']:.2f}°C<br>"
-                f"Average Humidity: {summary_forecast['average_humidity']:.2f}%<br>"
-                f"Total Precipitation: {summary_forecast['total_precipitation']:.2f} mm<br>"
-            )
+                summary_text = (
+                    f"Average Temperature: {summary['average_temperature']:.2f}°C<br>"
+                    f"Average Humidity: {summary['average_humidity']:.2f}%<br>"
+                    f"Total Precipitation: {summary['total_precipitation']:.2f} mm<br>"
+                )
 
-            return render_template(
-                "result.html",
-                plot_url=plot_filename_forecast,
-                pie_chart_url=pie_chart_filename_forecast,
-                summary=summary_text_forecast + "<br>" + weather_summary_forecast,
-            )
+                return render_template(
+                    "result.html",
+                    plot_url=plot_filename,
+                    pie_chart_url=pie_chart_filename,
+                    summary=summary_text + "<br>" + weather_summary,
+                )
 
-        return "Failed to process the forecast data."
+            return "Failed to process the weather data."
 
-
-    return "Invalid option selected."
+        except ValueError:
+            return "Invalid date format. Please use YYYY-MM-DD."
 
 
 if __name__ == "__main__":
